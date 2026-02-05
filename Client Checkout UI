@@ -1,0 +1,55 @@
+import React, { useState } from 'react';
+import axios from 'axios';
+
+export function CheckoutForm({ userId }: { userId?: string }) {
+    const [paymentId, setPaymentId] = useState<string | null>(null);
+    const [upiId, setUpiId] = useState<string>('saipradeep911-1@okaxis');
+    const [amount] = useState<number>(599);
+    const [utr, setUtr] = useState<string>('');
+    const [message, setMessage] = useState<string>('');
+
+    async function startUPIPayment() {
+        try {
+            const res = await axios.post('/checkout/upi', { userId, amount });
+            setUpiId(res.data.upiId);
+            setPaymentId(res.data.paymentId);
+            setMessage('UPI record created. Pay using your UPI app and submit UTR/ref number below.');
+        } catch (err: any) {
+            setMessage(err?.response?.data?.message || 'Checkout failed');
+        }
+    }
+
+    async function submitUTR() {
+        if (!paymentId || !utr) {
+            setMessage('PaymentId and UTR required');
+            return;
+        }
+        try {
+            await axios.post('/checkout/submit-utr', { paymentId, utr });
+            setMessage('UTR submitted. Admin will verify and enable Pro access.');
+        } catch (err: any) {
+            setMessage(err?.response?.data?.message || 'UTR submit failed');
+        }
+    }
+
+    return (
+        <div style={{ border: '1px solid #ddd', padding: 16, borderRadius: 8, maxWidth: 480 }}>
+            <h3>Subscribe Pro — ₹599 / month</h3>
+            <p>Manual UPI payment: <strong>{upiId}</strong></p>
+            <button onClick={startUPIPayment}>Start UPI Checkout</button>
+
+            {paymentId && (
+                <div style={{ marginTop: 12 }}>
+                    <p>Payment record: <code>{paymentId}</code></p>
+                    <p>After paying, paste the UTR / reference number below:</p>
+                    <input value={utr} onChange={(e) => setUtr(e.target.value)} placeholder="UTR / Reference no." />
+                    <div style={{ marginTop: 8 }}>
+                        <button onClick={submitUTR}>Submit UTR</button>
+                    </div>
+                </div>
+            )}
+
+            {message && <p style={{ marginTop: 12 }}>{message}</p>}
+        </div>
+    );
+}
